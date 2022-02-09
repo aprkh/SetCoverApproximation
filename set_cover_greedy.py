@@ -94,7 +94,8 @@ def set_cover_greedy(sets, elements):
                 print("Sets do not fully cover elements!", file=sys.stderr)
                 break
 
-        print(n_false, cover)
+        print("Number of remaining items:", n_false,
+              "\nCurrent cover:", cover, file=sys.stderr)
 
     return cover
 
