@@ -9,6 +9,7 @@
 
 from data_structures.bucket_queue.bucket_queue import BucketQueue
 import sys
+import random
 
 
 def main():
@@ -48,9 +49,14 @@ def set_cover_greedy(sets, elements):
 
     # Add the sets to a bucket queue
     bq = BucketQueue(C=len(elements), L=1)
-    sets = [(s, len(s)) for s in sets]
-    for i, (_, L) in enumerate(sets):
-        bq.insert(i, L)
+    sets = [(s, None) for s in sets]
+    for i, (s, _) in enumerate(sets):
+        priority = 0
+        for ele in s:
+            if ele in elements:
+                priority += 1
+        bq.insert(i, priority)
+        sets[i] = (s, priority)
 
     # Unused sets
     uncovered = set([i for i in range(len(sets))])
@@ -71,7 +77,7 @@ def set_cover_greedy(sets, elements):
         else:
             set_added, _ = sets[set_added_index]
             for ele in set_added:
-                # want to skip elements that are irrelevant
+                # want to skip elements that are irrelevant or already added
                 if not elements.get(ele, True):
                     elements[ele] = True
                     n_false -= 1
@@ -83,7 +89,8 @@ def set_cover_greedy(sets, elements):
                 remaining_set, remaining_set_priority = sets[remaining_set_index]
                 new_priority = remaining_set_priority
                 for ele in remaining_set:
-                    if elements.get(ele, False):  # want to skip elements that are irrelevant
+                    # want to skip elements that are irrelevant or already added
+                    if elements.get(ele, False):
                         remaining_set_priority -= 1
                 bq.change_priority(remaining_set_index,
                                    remaining_set_priority, new_priority)
@@ -98,6 +105,22 @@ def set_cover_greedy(sets, elements):
               "\nCurrent cover:", cover, file=sys.stderr)
 
     return cover
+
+
+def randomized_test(ntests, nmin_elements=50, nmax_elements=int(10e6),
+                    nmin_sets=1, nmax_sets=1000, noise=False, cover_all=True,
+                    algorithm=set_cover_greedy, **kwargs):
+    """
+    Creates a random set of elements in the range [nmin_elements, nmax_elements] 
+    to be covered. Randomly generates sets so that the union of these sets covers 
+    all or a subset of these elements (depending on boolean value of cover_all).
+
+    If noise is True, some elements not needing to be covered will be added.
+
+    Returns a boolean value indicating whether or not all of the elements are 
+    covered by the returned greedy algorithm cover.  
+    """
+    raise NotImplementedError
 
 
 if __name__ == '__main__':
