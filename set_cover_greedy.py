@@ -17,7 +17,7 @@ NOISE_PERCENTAGE = 0.10
 
 
 def main():
-    single_randomized_test(5, 10, 1, 5, True, True, set_cover_greedy)
+    print(single_randomized_test(10, 25, 5, 10, True, True, set_cover_greedy))
 
 
 def set_cover_greedy(sets, elements):
@@ -58,7 +58,6 @@ def set_cover_greedy(sets, elements):
 
     # Unused sets - only include sets that intersect with elements.
     uncovered = set([i for i, x in enumerate(sets) if x[1]])
-    print(0 in uncovered)
 
     while n_false > 0:
         # make sure at least one element is covered each round, otherwise break
@@ -67,10 +66,6 @@ def set_cover_greedy(sets, elements):
         # remove the set with the currently greatest number of uncovered
         # elements.
         set_added_index = bq.extract_max()
-
-        print(bq)
-
-        print("of the form:", sets[set_added_index])
 
         # If set_added_index is None, or the maximum priority of the sets is zero
         # there are no more sets left, but some elements are still uncovered.
@@ -104,9 +99,6 @@ def set_cover_greedy(sets, elements):
             if n_false == n_false_start:
                 print("Sets do not fully cover elements!", file=sys.stderr)
                 break
-
-        print("Number of remaining items:", n_false,
-              "\nCurrent cover:", cover, file=sys.stderr)
 
     return cover
 
@@ -159,6 +151,10 @@ def single_randomized_test(nmin_elements, nmax_elements, nmin_sets, nmax_sets,
                 ct -= 1
                 set_of_all_elements[x] = False
 
+    print(set(set_of_all_elements.keys()))
+    print(cover)
+    print(sets)
+
     return ct == 0
 
 
@@ -204,9 +200,6 @@ def generate_sets(universe, nsets, noise):
         new_element = universe[new_element_index]
         last_set.add(new_element)
     sets.append(last_set)
-
-    print("universe:", universe)
-    print("sets:", sets)
 
     return sets
 
