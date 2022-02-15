@@ -151,19 +151,39 @@ def single_randomized_test(nmin_elements, nmax_elements, nmin_sets, nmax_sets,
 
     cover = algorithm(sets, set_of_all_elements)
 
-    set_of_all_elements = {x: True for x in set_of_all_elements}
-    ct = len(set_of_all_elements)
-    for included_set in cover:
-        for x in included_set:
-            if set_of_all_elements.get(x, False):
-                ct -= 1
-                set_of_all_elements[x] = False
+    # If we want everything covered, then there should be no uncovered elements
+    # left in set_of_all_elements after we count all the elements in the returned
+    # cover. Alternatively, if we have some missing elements from the set, we should
+    # still cover every element in the intersection of set_of_all_elements and sets
+    # in our returned cover.
+    result = None
+    if cover_all:
+        set_of_all_elements = {x: True for x in set_of_all_elements}
+        ct = len(set_of_all_elements)
+        for included_set in cover:
+            for x in included_set:
+                if set_of_all_elements.get(x, False):
+                    ct -= 1
+                    set_of_all_elements[x] = False
+        result = (ct == 0)
+    else:
+        possible_elements = set()
+        for included_set in sets:
+            for element in included_set:
+                if element in set_of_all_elements:
+                    possible_elements.add(element)
+        covered_elements = set()
+        for included_set in cover:
+            for element in included_set:
+                if element in set_of_all_elements:
+                    covered_elements.add(element)
+        result = (covered_elements == possible_elements)
 
-    print(set(set_of_all_elements.keys()))
+    print(set_of_all_elements)
     print(cover)
     print(sets)
 
-    return ct == 0
+    return result
 
 
 def generate_sets(universe, nsets, noise, cover_all):
