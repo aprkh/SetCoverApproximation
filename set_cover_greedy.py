@@ -14,10 +14,11 @@ import random
 MIN_ELEMENT = 0
 MAX_ELEMENT = int(10e6)
 NOISE_PERCENTAGE = 0.10
+REMOVE_PERCENTAGE = 0.20
 
 
 def main():
-    print(single_randomized_test(10, 25, 5, 10, True, True, set_cover_greedy))
+    print(run_randomized_tests(25, 10, 25, 5, 10, True, False, set_cover_greedy))
 
 
 def set_cover_greedy(sets, elements):
@@ -117,6 +118,12 @@ def run_randomized_tests(ntests, nmin_elements=50, nmax_elements=int(10e6),
     covered by the returned greedy algorithm cover.  
     """
     assert nmin_sets >= 1, "Error: must have at least one set!"
+    results = [None for _ in range(ntests)]
+    for i in range(ntests):
+        results[i] = single_randomized_test(nmin_elements, nmax_elements,
+                                            nmin_sets, nmax_sets, noise,
+                                            cover_all, algorithm, **kwargs)
+    return all(results)
 
 
 def single_randomized_test(nmin_elements, nmax_elements, nmin_sets, nmax_sets,
@@ -139,7 +146,8 @@ def single_randomized_test(nmin_elements, nmax_elements, nmin_sets, nmax_sets,
     for _ in range(nelements):
         set_of_all_elements.add(random.randint(nmin_elements, nmax_elements))
 
-    sets = generate_sets(set_of_all_elements, nsets, noise=True)
+    sets = generate_sets(set_of_all_elements, nsets,
+                         noise, cover_all)
 
     cover = algorithm(sets, set_of_all_elements)
 
@@ -158,7 +166,7 @@ def single_randomized_test(nmin_elements, nmax_elements, nmin_sets, nmax_sets,
     return ct == 0
 
 
-def generate_sets(universe, nsets, noise):
+def generate_sets(universe, nsets, noise, cover_all):
     """
     Randomly generates nsets sets from a universe of elements, such that the 
     union of the sets is equal to the universe. 
@@ -170,7 +178,16 @@ def generate_sets(universe, nsets, noise):
     min_size = 1
     max_size = len(universe)
 
-    universe = list(universe)
+    # may or may not cover all elements
+    universe_list = []
+    for x in universe:
+        if cover_all:
+            universe_list.append(x)
+        else:
+            # randomly remove elements with pre-specified probability
+            if random.random() > REMOVE_PERCENTAGE:
+                universe_list.append(x)
+    universe = universe_list
     added = [False for _ in range(len(universe))]
     sets = []
     for _ in range(nsets-1):
