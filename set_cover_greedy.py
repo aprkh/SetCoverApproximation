@@ -13,19 +13,11 @@ import random
 
 MIN_ELEMENT = 0
 MAX_ELEMENT = int(10e6)
+NOISE_PERCENTAGE = 0.10
 
 
 def main():
-    elements = set([1, 3, 5])
-    sets = [set([1, 3]), set([5])]
-    set_cover_greedy(sets, elements)
-
-    elements = set([1, 3, 5, 6, 7, 8, 9, 10, 21, 48, 59, 62, 71, 80, 99, 100])
-    set1 = set([1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 21, 48])
-    set2 = set([59, 62, 71, 80, 81, 99])
-    set3 = set([101, 102])
-    sets = [set1, set2, set3]
-    set_cover_greedy(sets, elements)
+    single_randomized_test(5, 10, 1, 5, True, True, set_cover_greedy)
 
 
 def set_cover_greedy(sets, elements):
@@ -51,9 +43,10 @@ def set_cover_greedy(sets, elements):
     cover = list()
 
     # Add the sets to a bucket queue
-    bq = BucketQueue(C=len(elements), L=1)
+    bq = BucketQueue(C=len(elements), L=0)
     sets = [(s, None) for s in sets]
     for i, (s, _) in enumerate(sets):
+        # calculate size of intersection between this set and elements
         priority = 0
         for ele in s:
             if ele in elements:
@@ -65,6 +58,7 @@ def set_cover_greedy(sets, elements):
 
     # Unused sets - only include sets that intersect with elements.
     uncovered = set([i for i, x in enumerate(sets) if x[1]])
+    print(0 in uncovered)
 
     while n_false > 0:
         # make sure at least one element is covered each round, otherwise break
@@ -74,9 +68,13 @@ def set_cover_greedy(sets, elements):
         # elements.
         set_added_index = bq.extract_max()
 
-        # If set_added_index is None, there are no more sets left, but some
-        # elements are still uncovered.
-        if set_added_index is None:
+        print(bq)
+
+        print("of the form:", sets[set_added_index])
+
+        # If set_added_index is None, or the maximum priority of the sets is zero
+        # there are no more sets left, but some elements are still uncovered.
+        if set_added_index is None or sets[set_added_index] == 0:
             print("Sets do not fully cover elements!", file=sys.stderr)
             break
         else:
@@ -92,13 +90,14 @@ def set_cover_greedy(sets, elements):
             # update the priorities of all of the other sets
             for remaining_set_index in uncovered:
                 remaining_set, remaining_set_priority = sets[remaining_set_index]
-                new_priority = remaining_set_priority
+                new_priority = 0
                 for ele in remaining_set:
                     # want to skip elements that are irrelevant or already added
-                    if elements.get(ele, False):
-                        remaining_set_priority -= 1
-                bq.change_priority(remaining_set_index,
-                                   remaining_set_priority, new_priority)
+                    if not elements.get(ele, True):
+                        new_priority += 1
+                # minimum possible priority is zero
+                bq.change_priority(remaining_set_index, remaining_set_priority,
+                                   new_priority)
                 sets[remaining_set_index] = (remaining_set, new_priority)
 
             # make sure at least one element is covered each round, otherwise break
@@ -146,19 +145,19 @@ def single_randomized_test(nmin_elements, nmax_elements, nmin_sets, nmax_sets,
 
     set_of_all_elements = set()
     for _ in range(nelements):
-        set_of_all_elements.add(random.randint(MIN_ELEMENT, MAX_ELEMENT))
+        set_of_all_elements.add(random.randint(nmin_elements, nmax_elements))
 
-    sets = generate_sets(set_of_all_elements, nsets, noise=False)
+    sets = generate_sets(set_of_all_elements, nsets, noise=True)
 
     cover = algorithm(sets, set_of_all_elements)
 
-    set_of_all_elements = {x: False for x in set_of_all_elements}
+    set_of_all_elements = {x: True for x in set_of_all_elements}
     ct = len(set_of_all_elements)
     for included_set in cover:
         for x in included_set:
             if set_of_all_elements.get(x, False):
                 ct -= 1
-                set_of_all_elements[x] = True
+                set_of_all_elements[x] = False
 
     return ct == 0
 
@@ -168,7 +167,48 @@ def generate_sets(universe, nsets, noise):
     Randomly generates nsets sets from a universe of elements, such that the 
     union of the sets is equal to the universe. 
     """
-    raise NotImplementedError
+    # the minimum and maximum elements in the set
+    min_element = min(universe)
+    max_element = max(universe)
+
+    min_size = 1
+    max_size = len(universe)
+
+    universe = list(universe)
+    added = [False for _ in range(len(universe))]
+    sets = []
+    for _ in range(nsets-1):
+        size = random.randint(min_size, max_size)
+        new_set = set()
+        for _ in range(size):
+            new_element_index = random.randint(0, len(universe)-1)
+            new_element = universe[new_element_index]
+            added[new_element_index] = True
+            new_set.add(new_element)
+            # add noise element with specified probability
+            if random.random() < NOISE_PERCENTAGE:
+                # if random.random() < 0.50:
+                #     new_set.add(random.randint(
+                #         max_element + 1, MAX_ELEMENT + 1000))
+                # else:
+                #     new_set.add(random.randint(
+                #         MIN_ELEMENT - 1000, min_element - 1))
+                new_set.add(random.randint(max_element+1, max_element+1000))
+        sets.append(new_set)
+
+    last_set = {x for i, x in enumerate(universe) if not added[i]}
+    additional_size = random.randint(min_size - len(last_set),
+                                     max_size - len(last_set))
+    for i in range(0, additional_size):
+        new_element_index = random.randint(0, len(universe)-1)
+        new_element = universe[new_element_index]
+        last_set.add(new_element)
+    sets.append(last_set)
+
+    print("universe:", universe)
+    print("sets:", sets)
+
+    return sets
 
 
 if __name__ == '__main__':
