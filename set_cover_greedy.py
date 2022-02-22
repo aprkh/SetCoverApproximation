@@ -8,6 +8,8 @@
 ######################################################################
 
 from data_structures.bucket_queue.bucket_queue import BucketQueue
+from data_structures.eQTL_genotype_interface.People import People
+import numpy as np
 import sys
 import random
 
@@ -18,7 +20,19 @@ REMOVE_PERCENTAGE = 0.20
 
 
 def main():
-    print(run_randomized_tests(25, 10, 25, 5, 10, True, False, set_cover_greedy))
+    # print(run_randomized_tests(25, 10, 25, 5, 10, True, False, set_cover_greedy))
+
+    maternal_file = "data_structures\\eQTL_genotype_interface\\Xm1.txt"
+    paternal_file = "data_structures\\eQTL_genotype_interface\\Xp1.txt"
+
+    loci_to_cover = set([1, 4, 18, 12, 10, 19, 18, 15])
+    people = People(np.loadtxt(maternal_file)[
+                    1:, :], np.loadtxt(paternal_file)[1:, :])
+
+    het_sets = people.get_heterozygote_loci()
+
+    print(het_sets)
+    print(set_cover_greedy(het_sets, loci_to_cover))
 
 
 def set_cover_greedy(sets, elements):
@@ -31,10 +45,12 @@ def set_cover_greedy(sets, elements):
         sets (list[set()]) - an iterable of set objects.
         elements (set()) - a set of the elements to be covered.
     Outputs:
-        set_cover (list[set()]) - a subset of the input sets that covers
+        cover (list[set()]) - a subset of the input sets that covers
                                   all of the elements. This is meant to be
                                   a greedy approximation to the minimum
                                   set cover.
+        cover_index (list[int]) - the indices corresponding to which sets 
+                                  are included in the cover. 
     """
     # Convert set into a hash table.
     elements = {ele: False for ele in elements}
@@ -42,6 +58,7 @@ def set_cover_greedy(sets, elements):
 
     # The set cover to be returned.
     cover = list()
+    cover_index = list()
 
     # Add the sets to a bucket queue
     bq = BucketQueue(C=len(elements), L=0)
@@ -81,6 +98,7 @@ def set_cover_greedy(sets, elements):
                     elements[ele] = True
                     n_false -= 1
             cover.append(set_added)
+            cover_index.append(set_added_index)
             uncovered.remove(set_added_index)
 
             # update the priorities of all of the other sets
@@ -101,7 +119,7 @@ def set_cover_greedy(sets, elements):
                 print("Sets do not fully cover elements!", file=sys.stderr)
                 break
 
-    return cover
+    return cover, cover_index
 
 
 def run_randomized_tests(ntests, nmin_elements=50, nmax_elements=int(10e6),
@@ -149,7 +167,7 @@ def single_randomized_test(nmin_elements, nmax_elements, nmin_sets, nmax_sets,
     sets = generate_sets(set_of_all_elements, nsets,
                          noise, cover_all)
 
-    cover = algorithm(sets, set_of_all_elements)
+    cover, cover_index = algorithm(sets, set_of_all_elements)
 
     # If we want everything covered, then there should be no uncovered elements
     # left in set_of_all_elements after we count all the elements in the returned
@@ -180,7 +198,7 @@ def single_randomized_test(nmin_elements, nmax_elements, nmin_sets, nmax_sets,
         result = (covered_elements == possible_elements)
 
     print(set_of_all_elements)
-    print(cover)
+    print(cover, cover_index)
     print(sets)
 
     return result
@@ -232,7 +250,7 @@ def generate_sets(universe, nsets, noise, cover_all):
     last_set = {x for i, x in enumerate(universe) if not added[i]}
     additional_size = random.randint(min_size - len(last_set),
                                      max_size - len(last_set))
-    for i in range(0, additional_size):
+    for _ in range(0, additional_size):
         new_element_index = random.randint(0, len(universe)-1)
         new_element = universe[new_element_index]
         last_set.add(new_element)
